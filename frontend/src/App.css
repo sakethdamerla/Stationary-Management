@@ -1,0 +1,28 @@
+.app-container {
+  display: flex;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 2rem;
+  margin-left: 250px; /* Same as sidebar width */
+  width: calc(100% - 250px);
+}
+
+.placeholder-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80vh;
+  color: #888;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 60px; /* Same as collapsed sidebar width */
+    width: calc(100% - 60px);
+    padding: 1.5rem;
+  }
+}

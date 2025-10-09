@@ -1,0 +1,55 @@
+.dashboard-container {
+  width: 100%;
+}
+
+.controls {
+  margin-bottom: 1.5rem;
+}
+
+.search-bar {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75em 1em;
+  font-size: 1em;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  color: #213547;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th, td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background-color: #f0f2f5;
+}
+
+td:nth-child(3) { /* Paid column */
+  font-size: 1.2em;
+  text-align: center;
+}
+
+td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}

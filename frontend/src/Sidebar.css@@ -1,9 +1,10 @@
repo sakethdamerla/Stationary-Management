@@ -1,0 +1,92 @@
+.sidebar {
+  width: 250px;
+  background-color: #1a1a1a;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-right: 1px solid #333;
+}
+
+.sidebar-header {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid #333;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-nav a:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+.sidebar-nav a.active {
+  background-color: #646cff;
+  color: #fff;
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid #333;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background-color: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1em;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+/* Basic responsive collapse for demo */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 60px;
+  }
+  .sidebar-header h2,
+  .sidebar-nav span,
+  .logout-button span {
+    display: none;
+  }
+  .sidebar-nav a {
+    justify-content: center;
+  }
+}
