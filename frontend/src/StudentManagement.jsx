@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import './AddStudent.css';
-
+//student management page with add/edit/delete and bulk upload
 const StudentManagement = ({ students = [], setStudents, addStudent }) => {
   // add form fields (modal)
   const [showAddModal, setShowAddModal] = useState(false);
