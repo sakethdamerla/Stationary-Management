@@ -1,52 +1,79 @@
 .sidebar {
-  width: 250px;
-  background-color: #1a1a1a;
+  width: 220px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-600));
   color: #fff;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  border-right: 1px solid #e0e0e0;
+  padding-top: 1rem;
 }
 
 .sidebar-header {
-  padding: 1.5rem 1rem;
   text-align: center;
-  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 2rem;
+  font-size: larger;
 }
-
 .sidebar-header h2 {
-  margin: 0;
-  font-size: 1.5em;
+  margin-bottom: 45px;
+  font-size: larger;
+  font-weight: 700;
 }
-
 .sidebar-nav ul {
   list-style: none;
   padding: 0;
   margin: 1rem 0;
 }
 
+
 .sidebar-nav a {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  color: #cbd5e1;
+  padding: 0.75rem 1.25rem;
+  color: rgba(255,255,255,0.95);
   text-decoration: none;
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.15s, color 0.15s;
+  border-radius: 8px;
+  margin: 0.25rem 0.6rem;
 }
 
 .sidebar-nav a:hover {
-  background-color: #1f2937;
-  color: #ffffff;
+  background: white;
 }
 
 .sidebar-nav a.active {
-  background-color: #646cff;
+  background: rgba(251, 251, 251, 0.12);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+/* Logout button styles - ensure this overrides generic outline styles */
+.logout-button {
+  width: calc(100% - 24px);
+  margin: 0 12px;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ef4444; /* red */
+  color: #fff !important;
+  border: none;
+  border-radius: 8px;
+}
+
+.logout-button:hover {
+  background: #dc2626;
+}
+
+/* ensure logout button is visually dominant even if other rules apply */
+.logout-button, .logout-button.btn {
+  background: #ef4444 !important;
+  color: #fff !important;
 }
 
 /* Basic responsive collapse for demo */

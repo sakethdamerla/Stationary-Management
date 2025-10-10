@@ -41,7 +41,7 @@ const Login = ({ onLogin }) => {
               />
             </div>
             {error && <p className="error-message">{error}</p>}
-            <button type="submit">Login</button>
+            <button type="submit" className="btn btn-primary">Login</button>
           </form>
         </div>
       </div>

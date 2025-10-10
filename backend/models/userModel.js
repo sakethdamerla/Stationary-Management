@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please provide a password'],
-      select: false, // Password will not be sent in queries by default
+      select: false,
     },
     studentId: {
       type: String,
@@ -31,20 +31,30 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Please provide your course'],
       trim: true,
     },
+    branch: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     year: {
       type: Number,
       required: [true, 'Please provide your year of study'],
       min: [1, 'Year must be at least 1'],
     },
-    role: {
-      type: String,
-      enum: ['student', 'admin'],
-      default: 'student',
-    },
     orders: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'Order',
       default: [],
+    },
+    // Items assigned to a student (key-value map of itemCategory -> boolean)
+    items: {
+      type: Object,
+      default: {},
+    },
+    // Whether the student has paid or not
+    paid: {
+      type: Boolean,
+      default: false,
     },
   },
   {

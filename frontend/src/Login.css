@@ -68,3 +68,11 @@
   margin-bottom: 1rem;
   font-size: 0.9em;
 }
+
+/* Ensure login button aligns nicely within the centered login box */
+.login-box .btn {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  margin-top: 0.5rem;
+  display: block;
+}

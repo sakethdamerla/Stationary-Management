@@ -20,7 +20,7 @@ const Sidebar = ({ onLogout }) => {
             <li>
               <NavLink to="/add-student">
                 <PlusCircle size={20} />
-                <span>Add Student</span>
+                <span>Student Management</span>
               </NavLink>
             </li>
             <li>
@@ -39,9 +39,9 @@ const Sidebar = ({ onLogout }) => {
         </nav>
       </div>
       <div className="sidebar-footer">
-        <button onClick={onLogout} className="logout-button">
-          <LogOut size={20} />
-          <span>Logout</span>
+        <button onClick={onLogout} className="btn btn-outline logout-button">
+          <LogOut size={18} />
+          <span style={{ marginLeft: 8 }}>Logout</span>
         </button>
       </div>
     </aside>

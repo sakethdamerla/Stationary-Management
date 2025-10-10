@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Dashboard from './Dashboard';
+import StudentDetail from './StudentDetail';
+import CourseDashboard from './CourseDashboard';
 import AddStudent from './AddStudent';
+import StudentManagement from './StudentManagement';
 import Login from './Login';
 import ItemsList from './ItemsList';
 import HomePage from './HomePage';
@@ -20,7 +23,9 @@ const Settings = () => <div className="placeholder-page"><h1>Settings</h1><p>Thi
 
 function App() {
   const [students, setStudents] = useState([]);
-  const [itemCategories, setItemCategories] = useState(['books', 'uniform', 'blazer', 'apron']);
+  const [itemCategories, setItemCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [currentCourse, setCurrentCourse] = useState('');
   // Initialize isAuthenticated from localStorage
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('isAuthenticated'));
   const navigate = useNavigate();
@@ -49,6 +54,56 @@ function App() {
       localStorage.removeItem('isAuthenticated');
     }
   }, [isAuthenticated]);
+
+  // Fetch global products on app load to populate products and itemCategories
+  useEffect(() => {
+    fetch('/api/products')
+      .then((res) => res.json())
+      .then((data) => {
+        setProducts(data || []);
+        const cats = Array.from(new Set((data || []).map(p => p.name.toLowerCase().replace(/\s+/g, '_'))));
+        setItemCategories(cats);
+      })
+      .catch((err) => {
+        console.warn('Could not fetch products on app load:', err);
+      });
+  }, []);
+
+  // Listen to item category edit/delete events dispatched from ItemsList
+  useEffect(() => {
+    const onRemove = (e) => {
+      const name = e.detail;
+      setItemCategories((prev) => prev.filter((i) => i !== name));
+      // Remove the item key from all students
+      setStudents((prev) => prev.map(s => {
+        if (!s.items) return s;
+        const { [name]: removed, ...rest } = s.items;
+        return { ...s, items: rest };
+      }));
+    };
+
+    const onEdit = (e) => {
+      const { oldVal, newVal } = e.detail;
+      const normalizedNew = newVal.toLowerCase().replace(/\s+/g, '_');
+      setItemCategories((prev) => prev.map(i => i === oldVal ? normalizedNew : i));
+      setStudents((prev) => prev.map(s => {
+        const items = s.items || {};
+        if (items.hasOwnProperty(oldVal)) {
+          const val = items[oldVal];
+          const { [oldVal]: removed, ...rest } = items;
+          return { ...s, items: { ...rest, [normalizedNew]: val } };
+        }
+        return s;
+      }));
+    };
+
+    window.addEventListener('removeItemCategory', onRemove);
+    window.addEventListener('editItemCategory', onEdit);
+    return () => {
+      window.removeEventListener('removeItemCategory', onRemove);
+      window.removeEventListener('editItemCategory', onEdit);
+    };
+  }, []);
 
   const addStudent = async (newStudent) => {
     try {
@@ -88,19 +143,10 @@ function App() {
   };
 
   const addItemCategory = (newItem) => {
+    // This method now only updates client-side categories; server products are source of truth
     if (itemCategories.includes(newItem) || newItem.trim() === '') return;
     const newItemCategory = newItem.toLowerCase().replace(/\s+/g, '_');
     setItemCategories((prev) => [...prev, newItemCategory]);
-    // Add the new item with a default value to all existing students
-    setStudents((prevStudents) =>
-      prevStudents.map((student) => ({
-        ...student,
-        items: {
-          ...student.items,
-          [newItemCategory]: false,
-        },
-      }))
-    );
   };
 
   const handleLogin = (id, password) => {
@@ -127,15 +173,23 @@ function App() {
             <Routes>
               <Route
                 path="/"
-                element={<Dashboard students={students} setStudents={setStudents} itemCategories={itemCategories} />}
+                element={<Dashboard students={students} setStudents={setStudents} itemCategories={itemCategories} products={products} setProducts={setProducts} setCurrentCourse={setCurrentCourse} />}
+              />
+              <Route
+                path="/course/:course"
+                element={<CourseDashboard students={students} setStudents={setStudents} products={products} />}
+              />
+              <Route
+                path="/student/:id"
+                element={<StudentDetail students={students} setStudents={setStudents} products={products} />}
               />
               <Route
                 path="/add-student"
-                element={<AddStudent addStudent={addStudent} />}
+                element={<StudentManagement addStudent={addStudent} students={students} setStudents={setStudents} />}
               />
               <Route
                 path="/items"
-                element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} />}
+                element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} setItemCategories={setItemCategories} currentCourse={currentCourse} products={products} setProducts={setProducts} />}
               />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" />} />

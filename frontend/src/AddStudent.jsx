@@ -5,8 +5,9 @@ import './AddStudent.css';
 const AddStudent = ({ addStudent }) => {
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [course, setCourse] = useState('');
-  const [year, setYear] = useState('');
+  const [course, setCourse] = useState('b.tech');
+  const [year, setYear] = useState('1');
+  const [branch, setBranch] = useState('CSE');
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
@@ -22,9 +23,10 @@ const AddStudent = ({ addStudent }) => {
       studentId,
       course,
       year: parseInt(year, 10), // Ensure year is a number
+      branch,
     };
 
-    const result = await addStudent(newStudent);
+  const result = await addStudent(newStudent);
 
     if (result.success) {
       setMessage('Student added successfully!');
@@ -52,17 +54,48 @@ const AddStudent = ({ addStudent }) => {
         </div>
         <div className="form-group">
           <label htmlFor="course">Course</label>
-          <input type="text" id="course" value={course} onChange={(e) => setCourse(e.target.value)} />
+          <select id="course" value={course} onChange={(e) => {
+            const newCourse = e.target.value;
+            setCourse(newCourse);
+            // reset year/branch to first valid option for that course
+            setYear('1');
+            if (newCourse === 'b.tech') setBranch('CSE');
+            else setBranch('General');
+          }}>
+            <option value="b.tech">B.Tech</option>
+            <option value="diploma">Diploma</option>
+            <option value="degree">Degree</option>
+          </select>
         </div>
         <div className="form-group">
           <label htmlFor="year">Year</label>
-          <input
-            type="number"
-            id="year"
-            value={year}
-            onChange={(e) => setYear(e.target.value)} />
+          <select id="year" value={year} onChange={(e) => setYear(e.target.value)}>
+            {(course === 'b.tech' ? [1,2,3,4] : [1,2,3]).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
         </div>
-        <button type="submit">Add Student</button>
+        <div className="form-group">
+          <label htmlFor="branch">Branch</label>
+          <select id="branch" value={branch} onChange={(e) => setBranch(e.target.value)}>
+            {course === 'b.tech' ? (
+              <>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="EEE">EEE</option>
+              </>
+            ) : (
+              <>
+                <option value="General">General</option>
+                <option value="IT">IT</option>
+                <option value="Management">Management</option>
+              </>
+            )}
+          </select>
+        </div>
+  <button type="submit" className="btn btn-primary">Add Student</button>
         {message && <p className={message.includes('successfully') ? 'success-message' : 'error-message'}>{message}</p>}
       </form>
     </div>

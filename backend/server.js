@@ -2,7 +2,7 @@ const express = require('express');
 const connectDB = require('./config/db'); // Assuming db.js is in a 'config' folder
 const productRoutes = require('./routes/productRoutes');
 const cors = require('cors');
-const userRoutes = require('./models/userRoutes');
+const userRoutes = require('./routes/userRoutes');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -29,6 +29,7 @@ app.use('/api/products', productRoutes);
 // Mount user routes
 app.use('/api', userRoutes);
 
-app.listen(5000, () => {
-  console.log('Server started on port 5000');
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
 });

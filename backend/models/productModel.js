@@ -22,6 +22,26 @@ const productSchema = new mongoose.Schema(
       required: [true, 'Please specify a category'],
       enum: ['Notebooks', 'Pens', 'Art Supplies', 'Electronics', 'Other'],
     },
+    // Which course this product belongs to (e.g., b.tech, diploma, degree). If blank, it's global
+    forCourse: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    // Which year this product applies to (1,2,3,4). If blank (0), applies to all years
+    // Allow 0 as a special value meaning "applies to all years" so min must be 0
+    year: {
+      type: Number,
+      min: 0,
+      max: 10,
+      default: 0,
+    },
+    // Optional branch applicability (e.g., CSE, ECE)
+    branch: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     stock: {
       type: Number,
       required: true,
