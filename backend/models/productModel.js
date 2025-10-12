@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getCourseConnection } = require('../config/db');
 
 // Define the schema for a product
 const productSchema = new mongoose.Schema(
@@ -58,4 +59,18 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Product', productSchema);
+// Factory function to get Product model for a specific course
+const getProductModel = async (course) => {
+  try {
+    const connection = await getCourseConnection(course);
+    return connection.model('Product', productSchema);
+  } catch (error) {
+    console.error(`Error getting Product model for course ${course}:`, error);
+    throw error;
+  }
+};
+
+// Default model for main database (backward compatibility)
+const Product = mongoose.model('Product', productSchema);
+
+module.exports = { Product, getProductModel };

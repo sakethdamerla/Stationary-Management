@@ -1,7 +1,7 @@
-const User = require('../models/userModel');
+const { User, getUserModel } = require('../models/userModel');
+const { getOrderModel } = require('../models/orderModel');
+const { getProductModel } = require('../models/productModel');
 const asyncHandler = require('express-async-handler');
-// Ensure Order model is registered so populate('orders') can resolve
-require('../models/orderModel');
 
 /**
  * @desc    Register a new user/student
@@ -9,10 +9,18 @@ require('../models/orderModel');
  * @access  Public
  */
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, studentId, course, year } = req.body;
+  const { name, email, password, studentId, course, year, branch } = req.body;
 
-  // Check if a user with the same email or studentId already exists
-  const userExists = await User.findOne({ $or: [{ email }, { studentId }] });
+  if (!course) {
+    res.status(400);
+    throw new Error('Course is required');
+  }
+
+  // Get the appropriate User model for the course
+  const UserModel = await getUserModel(course);
+
+  // Check if a user with the same email or studentId already exists in this course database
+  const userExists = await UserModel.findOne({ $or: [{ email }, { studentId }] });
 
   if (userExists) {
     res.status(400);
@@ -25,13 +33,14 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error(message);
   }
 
-  const user = await User.create({
+  const user = await UserModel.create({
       name,
       email,
       password,
       studentId,
       course,
       year,
+      branch,
     });
 
   if (user) {
@@ -43,7 +52,7 @@ const registerUser = asyncHandler(async (req, res) => {
       studentId: user.studentId,
       course: user.course,
       year: user.year,
-      role: user.role,
+      branch: user.branch,
       items: user.items,
       paid: user.paid,
     }});
@@ -54,13 +63,27 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Get all users/students
- * @route   GET /api/users
+ * @desc    Get all users/students for a specific course
+ * @route   GET /api/users/:course
  * @access  Private/Admin (Should be protected in a real app)
  */
-const getUsers = asyncHandler(async (req, res) => {
+const getUsersByCourse = asyncHandler(async (req, res) => {
+  const { course } = req.params;
+  
+  if (!course) {
+    res.status(400);
+    throw new Error('Course parameter is required');
+  }
+
+  // Get the appropriate User model for the course
+  const UserModel = await getUserModel(course);
+  
+  // Ensure Order and Product models are registered on the same connection for populate to work
+  await getOrderModel(course);
+  await getProductModel(course);
+  
   // Populate orders for each user, and then populate the products within each order's orderItems
-  const users = await User.find({}).populate({
+  const users = await UserModel.find({}).populate({
     path: 'orders',
     populate: {
       path: 'orderItems.product',
@@ -71,58 +94,130 @@ const getUsers = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Get all users/students from all courses
+ * @route   GET /api/users
+ * @access  Private/Admin (Should be protected in a real app)
+ */
+const getAllUsers = asyncHandler(async (req, res) => {
+  const courses = ['b.tech', 'diploma', 'degree'];
+  const allUsers = [];
+
+  for (const course of courses) {
+    try {
+      const UserModel = await getUserModel(course);
+      
+      // Ensure Order and Product models are registered on the same connection for populate to work
+      await getOrderModel(course);
+      await getProductModel(course);
+      
+      const users = await UserModel.find({}).populate({
+        path: 'orders',
+        populate: {
+          path: 'orderItems.product',
+          model: 'Product',
+        },
+      });
+      allUsers.push(...users);
+    } catch (error) {
+      console.error(`Error fetching users for course ${course}:`, error);
+      // Continue with other courses even if one fails
+    }
+  }
+
+  res.status(200).json(allUsers);
+});
+
+/**
  * @desc    Update a user's items/paid status
- * @route   PUT /api/users/:id
+ * @route   PUT /api/users/:course/:id
  * @access  Public
  */
 const updateUser = asyncHandler(async (req, res) => {
-  const { items, paid, name, studentId, course, year, branch } = req.body;
-  const user = await User.findById(req.params.id);
+  const { course, id } = req.params;
+  const { items, paid, name, studentId, year, branch } = req.body;
+  
+  if (!course) {
+    res.status(400);
+    throw new Error('Course parameter is required');
+  }
+
+  // Get the appropriate User model for the course
+  const UserModel = await getUserModel(course);
+  const user = await UserModel.findById(id);
+  
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  // allow profile updates (name, studentId, course, year, branch) and items/paid
+  // allow profile updates (name, studentId, year, branch) and items/paid
   if (items !== undefined) user.items = items;
   if (paid !== undefined) user.paid = paid;
   if (name !== undefined) user.name = name;
   if (studentId !== undefined) user.studentId = studentId;
-  if (course !== undefined) user.course = course;
   if (year !== undefined) user.year = year;
   if (branch !== undefined) user.branch = branch;
 
   const updated = await user.save();
-  res.json({ _id: updated._id, name: updated.name, studentId: updated.studentId, course: updated.course, year: updated.year, branch: updated.branch, items: updated.items, paid: updated.paid });
+  res.json({ 
+    _id: updated._id, 
+    name: updated.name, 
+    studentId: updated.studentId, 
+    course: updated.course, 
+    year: updated.year, 
+    branch: updated.branch, 
+    items: updated.items, 
+    paid: updated.paid 
+  });
 });
 
 /**
  * @desc    Delete a user/student
- * @route   DELETE /api/users/:id
+ * @route   DELETE /api/users/:course/:id
  * @access  Public
  */
 const deleteUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const { course, id } = req.params;
+  
+  if (!course) {
+    res.status(400);
+    throw new Error('Course parameter is required');
+  }
+
+  // Get the appropriate User model for the course
+  const UserModel = await getUserModel(course);
+  const user = await UserModel.findById(id);
+  
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  await User.findByIdAndDelete(req.params.id);
+  await UserModel.findByIdAndDelete(id);
   res.json({ message: 'User deleted' });
 });
 
 /**
  * @desc    Import users from uploaded Excel/CSV file
- * @route   POST /api/users/import
+ * @route   POST /api/users/import/:course
  * @access  Public
  */
 const importUsers = asyncHandler(async (req, res) => {
+  const { course } = req.params;
+  
+  if (!course) {
+    res.status(400);
+    throw new Error('Course parameter is required');
+  }
+
   // multer stores file in memory (buffer)
   if (!req.file) {
     res.status(400);
     throw new Error('No file uploaded');
   }
+
+  // Get the appropriate User model for the course
+  const UserModel = await getUserModel(course);
 
   const XLSX = require('xlsx');
   const buffer = req.file.buffer;
@@ -134,10 +229,9 @@ const importUsers = asyncHandler(async (req, res) => {
 
   const imported = [];
   for (const row of rows) {
-    // Accept columns: name, studentId, course, year, branch (case-insensitive)
+    // Accept columns: name, studentId, year, branch (case-insensitive)
     const name = row.name || row.Name || row.NAME || '';
     const studentId = row.studentId || row.StudentId || row['student id'] || row['Student ID'] || '';
-    const course = row.course || row.Course || '';
     const year = row.year || row.Year || '';
     const branch = row.branch || row.Branch || '';
 
@@ -146,12 +240,11 @@ const importUsers = asyncHandler(async (req, res) => {
       continue;
     }
 
-    // Check existing
-    let existing = await User.findOne({ studentId: String(studentId) });
+    // Check existing in the course-specific database
+    let existing = await UserModel.findOne({ studentId: String(studentId) });
     if (existing) {
       // update basic profile if present
       existing.name = name || existing.name;
-      if (course) existing.course = course;
       if (year) existing.year = Number(year) || existing.year;
       if (branch) existing.branch = branch;
       await existing.save();
@@ -160,9 +253,17 @@ const importUsers = asyncHandler(async (req, res) => {
     }
 
     // Create new user - set a random password placeholder since register normally handles passwords
-    const toCreate = { name, studentId: String(studentId), course: course || '', year: year ? Number(year) : undefined, branch: branch || '' };
+    const toCreate = { 
+      name, 
+      studentId: String(studentId), 
+      course: course, 
+      year: year ? Number(year) : undefined, 
+      branch: branch || '',
+      email: `${studentId}@student.com`, // Generate a placeholder email
+      password: 'temp123' // Temporary password
+    };
     try {
-      const created = await User.create(toCreate);
+      const created = await UserModel.create(toCreate);
       imported.push({ _id: created._id, name: created.name, studentId: created.studentId, course: created.course, year: created.year, branch: created.branch });
     } catch (err) {
       // skip on error but continue
@@ -174,4 +275,4 @@ const importUsers = asyncHandler(async (req, res) => {
   res.json({ imported });
 });
 
-module.exports = { registerUser, getUsers, updateUser, deleteUser, importUsers };
+module.exports = { registerUser, getAllUsers, getUsersByCourse, updateUser, deleteUser, importUsers };

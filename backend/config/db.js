@@ -1,7 +1,46 @@
 const mongoose = require('mongoose');
 
+// Store connections for different databases
+const connections = {};
+
 /**
- * Establishes a connection to the MongoDB database.
+ * Get or create a connection to a course-specific database
+ */
+const getCourseConnection = async (course) => {
+  // Normalize course name for database naming
+  const dbName = course.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  if (connections[dbName]) {
+    return connections[dbName];
+  }
+
+  try {
+    const baseUri = process.env.MONGO_URI;
+    if (!baseUri) {
+      throw new Error('MONGO_URI environment variable is not set');
+    }
+
+    // Create course-specific database URI
+    const courseUri = baseUri.replace(/\/[^\/]*$/, `/${dbName}`);
+    
+    console.log(`Connecting to course database: ${dbName}`);
+    
+    const conn = await mongoose.createConnection(courseUri, {
+      serverSelectionTimeoutMS: 10000,
+    });
+
+    connections[dbName] = conn;
+    console.log(`Course database connected: ${dbName}`);
+    
+    return conn;
+  } catch (error) {
+    console.error(`Error connecting to course database ${dbName}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Establishes a connection to the main MongoDB database.
  */
 const connectDB = async () => {
   try {
@@ -22,4 +61,4 @@ const connectDB = async () => {
   }
 };
 
-module.exports = connectDB;
+module.exports = { connectDB, getCourseConnection };                                             

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-//def
+const { getCourseConnection } = require('../config/db');
+
 // Define the schema for an order
 const orderSchema = new mongoose.Schema(
   {
@@ -56,4 +57,18 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Order', orderSchema);
+// Factory function to get Order model for a specific course
+const getOrderModel = async (course) => {
+  try {
+    const connection = await getCourseConnection(course);
+    return connection.model('Order', orderSchema);
+  } catch (error) {
+    console.error(`Error getting Order model for course ${course}:`, error);
+    throw error;
+  }
+};
+
+// Default model for main database (backward compatibility)
+const Order = mongoose.model('Order', orderSchema);
+
+module.exports = { Order, getOrderModel };

@@ -1,4 +1,4 @@
-const Product = require('../models/productModel');
+const { Product } = require('../models/productModel');
 
 /**
  * @desc    Create a new product
@@ -129,7 +129,7 @@ const deleteProduct = async (req, res) => {
     // Also remove this product key from any user's items map (if present)
     try {
       const key = product.name.toLowerCase().replace(/\s+/g, '_');
-      const User = require('../models/userModel');
+      const { User } = require('../models/userModel');
       // Unset the nested items.<key> field for all users
       await User.updateMany({ [`items.${key}`]: { $exists: true } }, { $unset: { [`items.${key}`]: "" } });
     } catch (innerErr) {

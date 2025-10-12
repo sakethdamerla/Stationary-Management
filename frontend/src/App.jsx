@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
-import Dashboard from './Dashboard';
-import StudentDetail from './StudentDetail';
-import CourseDashboard from './CourseDashboard';
-import AddStudent from './AddStudent';
-import StudentManagement from './StudentManagement';
-import Login from './Login';
-import ItemsList from './ItemsList';
-import HomePage from './HomePage';
-import './App.css';
+import Dashboard from './pages/Dashboard';
+import StudentDetail from './pages/StudentDetail';
+import CourseDashboard from './pages/CourseDashboard';
+import AddStudent from './pages/AddStudent';
+import StudentManagement from './pages/StudentManagement';
+import Login from './pages/Login';
+import ItemsList from './pages/ItemsList';
+import HomePage from './pages/HomePage';
 
 // Hardcoded credentials for login
 const credentials = [
@@ -28,7 +28,19 @@ function App() {
   const [currentCourse, setCurrentCourse] = useState('');
   // Initialize isAuthenticated from localStorage
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('isAuthenticated'));
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const navigate = useNavigate();
+
+  // Check for mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -165,35 +177,60 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="flex min-h-screen bg-gray-50">
       {isAuthenticated ? (
         <>
-          <Sidebar onLogout={handleLogout} />
-          <main className="main-content">
-            <Routes>
-              <Route
-                path="/"
-                element={<Dashboard students={students} setStudents={setStudents} itemCategories={itemCategories} products={products} setProducts={setProducts} setCurrentCourse={setCurrentCourse} />}
-              />
-              <Route
-                path="/course/:course"
-                element={<CourseDashboard students={students} setStudents={setStudents} products={products} />}
-              />
-              <Route
-                path="/student/:id"
-                element={<StudentDetail students={students} setStudents={setStudents} products={products} />}
-              />
-              <Route
-                path="/add-student"
-                element={<StudentManagement addStudent={addStudent} students={students} setStudents={setStudents} />}
-              />
-              <Route
-                path="/items"
-                element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} setItemCategories={setItemCategories} currentCourse={currentCourse} products={products} setProducts={setProducts} />}
-              />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
+          <Sidebar 
+            onLogout={handleLogout} 
+            isMobile={isMobile}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
+          <main className={`
+            flex-1 min-h-screen bg-gray-50 flex justify-center items-start transition-all duration-300
+            ${isMobile 
+              ? 'ml-0 pt-20 px-4' 
+              : 'ml-80 px-8'
+            }
+          `}>
+            {isMobile && (
+              <button 
+                className="fixed top-4 left-4 z-50 w-12 h-12 rounded-xl bg-primary-500 border-none text-white flex items-center justify-center cursor-pointer shadow-strong transition-all duration-200 hover:bg-primary-600 hover:scale-105"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+              >
+                <Menu size={24} />
+              </button>
+            )}
+            <div className="w-full max-w-7xl mx-auto">
+              <Routes>
+                <Route
+                  path="/"
+                  element={<Dashboard />}
+                />
+                <Route
+                  path="/course/:course"
+                  element={<CourseDashboard products={products} />}
+                />
+                <Route
+                  path="/student/:id"
+                  element={<StudentDetail students={students} setStudents={setStudents} products={products} />}
+                />
+                <Route
+                  path="/add-student"
+                  element={<AddStudent addStudent={addStudent} />}
+                />
+                <Route
+                  path="/student-management"
+                  element={<StudentManagement students={students} setStudents={setStudents} addStudent={addStudent} />}
+                />
+                <Route
+                  path="/items"
+                  element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} setItemCategories={setItemCategories} currentCourse={currentCourse} products={products} setProducts={setProducts} />}
+                />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </div>
           </main>
         </>
       ) : (

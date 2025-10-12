@@ -1,5 +1,5 @@
 const express = require('express');
-const connectDB = require('./config/db'); // Assuming db.js is in a 'config' folder
+const { connectDB } = require('./config/db'); // Assuming db.js is in a 'config' folder
 const productRoutes = require('./routes/productRoutes');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
