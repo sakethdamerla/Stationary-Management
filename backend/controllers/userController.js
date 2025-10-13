@@ -20,7 +20,9 @@ const registerUser = asyncHandler(async (req, res) => {
   const UserModel = await getUserModel(course);
 
   // Check if a user with the same email or studentId already exists in this course database
-  const userExists = await UserModel.findOne({ $or: [{ email }, { studentId }] });
+  const userExists = await UserModel.findOne({
+    $or: [{ email }, { studentId }],
+  }).select('+password');
 
   if (userExists) {
     res.status(400);

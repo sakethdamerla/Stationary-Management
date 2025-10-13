@@ -62,7 +62,8 @@ const productSchema = new mongoose.Schema(
 // Factory function to get Product model for a specific course
 const getProductModel = async (course) => {
   try {
-    const connection = await getCourseConnection(course);
+    // Sanitize course name and await the connection
+    const connection = await getCourseConnection(course.replace(/\./g, ''));
     return connection.model('Product', productSchema);
   } catch (error) {
     console.error(`Error getting Product model for course ${course}:`, error);

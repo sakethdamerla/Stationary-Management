@@ -75,7 +75,9 @@ userSchema.pre('save', async function (next) {
 // Factory function to get User model for a specific course
 const getUserModel = async (course) => {
   try {
-    const connection = await getCourseConnection(course);
+    // Sanitize course name and await the connection
+    const sanitizedCourse = course.replace(/\./g, '');
+    const connection = await getCourseConnection(sanitizedCourse);
     return connection.model('User', userSchema);
   } catch (error) {
     console.error(`Error getting User model for course ${course}:`, error);

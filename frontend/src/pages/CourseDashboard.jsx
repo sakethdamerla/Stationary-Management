@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Search, Edit, Trash2 } from 'lucide-react';
-
+import StudentReceiptModal from './StudentReceipt.jsx';
+ 
 const PageStyles = () => (
   <style>{`
     .students-table-modern {
@@ -87,6 +88,14 @@ const PageStyles = () => (
       flex-direction: column;
       gap: 0.25rem;
     }
+    .students-table-modern tbody tr {
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .receipt-modal-backdrop { position: static; background: none; }
+    }
   `}</style>
 );
 
@@ -96,6 +105,7 @@ const CourseDashboard = ({ products = [] }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -118,6 +128,14 @@ const CourseDashboard = ({ products = [] }) => {
     }
   }, [course]);
 
+  // Effect to keep selectedStudent in sync with the main students list
+  useEffect(() => {
+    if (selectedStudent) {
+      const updatedStudent = students.find(s => s.id === selectedStudent.id);
+      setSelectedStudent(updatedStudent || null);
+    }
+  }, [students, selectedStudent]);
+
   const [yearFilter, setYearFilter] = useState('all');
 
   const filteredStudents = useMemo(() => {
@@ -129,38 +147,35 @@ const CourseDashboard = ({ products = [] }) => {
     });
   }, [students, searchTerm, yearFilter]);
 
-  const handleItemToggle = (studentId, itemName) => {
+  const handleStudentUpdate = (studentId, updateData) => {
     const updatedStudents = students.map(student => {
-      if (student._id === studentId) {
-        const items = { ...(student.items || {}) };
-        items[itemName] = !Boolean(items[itemName]);
-        const updatedStudent = { ...student, items };
+      if (student.id === studentId) {
+        const updatedStudent = { ...student, ...updateData };
+        
         fetch(`/api/users/${course}/${student._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ paid: updatedStudent.paid, items: updatedStudent.items }),
         }).catch(err => console.error('Failed to update student:', err));
+
         return updatedStudent;
       }
       return student;
     });
     setStudents(updatedStudents);
   };
+  
+  const handleItemToggle = (studentId, itemName) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    const newItems = { ...(student.items || {}), [itemName]: !Boolean(student.items && student.items[itemName]) };
+    handleStudentUpdate(studentId, { items: newItems });
+  };
 
   const handlePaidToggle = (studentId) => {
-    const updatedStudents = students.map(student => {
-      if (student._id === studentId) {
-        const updatedStudent = { ...student, paid: !student.paid };
-        fetch(`/api/users/${course}/${student._id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paid: updatedStudent.paid, items: updatedStudent.items }),
-        }).catch(err => console.error('Failed to update student:', err));
-        return updatedStudent;
-      }
-      return student;
-    });
-    setStudents(updatedStudents);
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    handleStudentUpdate(studentId, { paid: !student.paid });
   };
 
   const yearOptions = Array.from(new Set(students.map(s => s.year))).sort((a, b) => a - b);
@@ -192,20 +207,12 @@ const CourseDashboard = ({ products = [] }) => {
   };
 
   const StudentRow = ({ student }) => {
-    const visibleItems = useMemo(() => {
-      return (products || []).filter(p => {
-        if (p.forCourse && p.forCourse !== student.course) return false;
-        if (p.year && Number(p.year) !== Number(student.year)) return false;
-        return true;
-      });
-    }, [products, student.course, student.year]);
-
     const handleDelete = () => {
       if (window.confirm('Are you sure you want to delete this student?')) {
         fetch(`/api/users/${course}/${student._id}`, { method: 'DELETE' })
           .then(res => {
             if (res.ok) {
-              setStudents(prev => prev.filter(s => s._id !== student._id));
+              setStudents(prev => prev.filter(s => s.id !== student.id));
             } else {
               throw new Error('Delete failed');
             }
@@ -215,7 +222,7 @@ const CourseDashboard = ({ products = [] }) => {
     };
 
     return (
-      <tr key={student._id}>
+      <tr key={student.id} onClick={() => setSelectedStudent(student)}>
         <td className="student-name-cell">
           <div className="student-info">
             <span className="student-name">{student.name}</span>
@@ -230,12 +237,12 @@ const CourseDashboard = ({ products = [] }) => {
         <td className="student-branch-cell">
           <span className="branch-text">{student.branch || 'N/A'}</span>
         </td>
-        <td className="paid-status-cell">
+        <td className="paid-status-cell" onClick={(e) => e.stopPropagation()}>
           <label className="toggle-switch-modern">
             <input
               type="checkbox"
               checked={student.paid}
-              onChange={() => handlePaidToggle(student._id)}
+              onChange={() => handlePaidToggle(student.id)}
             />
             <span className="slider-modern"></span>
           </label>
@@ -243,28 +250,10 @@ const CourseDashboard = ({ products = [] }) => {
             {student.paid ? 'Paid' : 'Unpaid'}
           </span>
         </td>
-        <td className="items-cell">
-          <div className="items-container">
-            {visibleItems.map(item => {
-              const key = item.name.toLowerCase().replace(/\s+/g, '_');
-              return (
-                <label key={key} className="item-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(student.items && student.items[key])}
-                    onChange={() => handleItemToggle(student._id, key)}
-                  />
-                  <span className="item-name">{item.name}</span>
-                </label>
-              );
-            })}
-            {visibleItems.length === 0 && <span className="no-items text-xs text-gray-500">No items</span>}
-          </div>
-        </td>
         <td className="actions-cell">
           <div className="action-buttons">
-            <button className="btn btn-outline btn-sm btn-with-icon" onClick={() => navigate(`/student/${student.id}`)}><Edit size={14} /></button>
-            <button className="btn btn-danger btn-sm btn-with-icon" onClick={handleDelete}><Trash2 size={14} /></button>
+            <button className="btn btn-outline btn-sm btn-with-icon" onClick={(e) => { e.stopPropagation(); navigate(`/student/${student.id}`); }}><Edit size={14} /><span className="hidden sm:inline ml-1">Edit</span></button>
+            <button className="btn btn-danger btn-sm btn-with-icon" onClick={(e) => { e.stopPropagation(); handleDelete(e); }}><Trash2 size={14} /></button>
           </div>
         </td>
       </tr>
@@ -370,13 +359,12 @@ const CourseDashboard = ({ products = [] }) => {
                     <th>Year</th>
                     <th>Branch</th>
                     <th>Payment Status</th>
-                    <th>Items</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStudents.map(student => (
-                    <StudentRow key={student._id} student={student} />
+                    <StudentRow key={student.id} student={student} />
                   ))}
                 </tbody>
               </table>
@@ -384,6 +372,15 @@ const CourseDashboard = ({ products = [] }) => {
           </div>
         )}
       </div>
+
+      {selectedStudent && (
+        <StudentReceiptModal
+          student={selectedStudent}
+          products={products}
+          onClose={() => setSelectedStudent(null)}
+          onItemToggle={handleItemToggle}
+        />
+      )}
     </div>
   );
 };

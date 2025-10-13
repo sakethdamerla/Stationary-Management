@@ -5,16 +5,17 @@ const Login = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!onLogin(id, password)) {
+    const success = await onLogin(id, password);
+    if (!success) {
       setError('Invalid ID or password.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center mx-auto">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-xl shadow-strong border border-gray-200 p-8">
           <div className="text-center mb-8">

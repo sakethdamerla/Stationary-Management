@@ -8,15 +8,10 @@ import CourseDashboard from './pages/CourseDashboard';
 import AddStudent from './pages/AddStudent';
 import StudentManagement from './pages/StudentManagement';
 import Login from './pages/Login';
+import SubAdminManagement from './pages/SubAdminManagement';
 import ItemsList from './pages/ItemsList';
 import HomePage from './pages/HomePage';
-
-// Hardcoded credentials for login
-const credentials = [
-  { id: 'admin1', password: 'password1' },
-  { id: 'admin2', password: 'password2' },
-  { id: 'admin3', password: 'password3' },
-];
+import StudentReceiptModal from './pages/StudentReceipt.jsx';
 
 // Placeholder component for other routes
 const Settings = () => <div className="placeholder-page"><h1>Settings</h1><p>This page is a placeholder for settings.</p></div>;
@@ -27,6 +22,7 @@ function App() {
   const [products, setProducts] = useState([]);
   const [currentCourse, setCurrentCourse] = useState('');
   // Initialize isAuthenticated from localStorage
+  const [currentUser, setCurrentUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('isAuthenticated'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -36,34 +32,45 @@ function App() {
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
+      setSidebarOpen(window.innerWidth > 768); // Open on desktop, closed on mobile
     };
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      // Persist authentication state
-      localStorage.setItem('isAuthenticated', 'true');
+    const fetchDataForAuthenticatedUser = async () => {
+      try {
+        // Persist authentication state
+        localStorage.setItem('isAuthenticated', 'true');
 
-      // Use relative path to leverage the Vite proxy
-      fetch('/api/users')
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return res.json();
-        })
-        .then((data) => {
-          // Mongoose uses `_id` by default
-          const formattedStudents = data.map(s => ({ ...s, id: s._id }));
-          setStudents(formattedStudents);
-        })
-        .catch((err) => console.error('Failed to fetch students:', err));
+        // Fetch current user profile
+        const profileRes = await fetch('/api/auth/profile');
+        if (!profileRes.ok) throw new Error('Not authenticated');
+        const userData = await profileRes.json();
+        setCurrentUser(userData.user || userData);
+
+        // Fetch students data
+        const studentsRes = await fetch('/api/users');
+        if (!studentsRes.ok) throw new Error('Network response was not ok');
+        const studentsData = await studentsRes.json();
+        const formattedStudents = studentsData.map(s => ({ ...s, id: s._id }));
+        setStudents(formattedStudents);
+      } catch (error) {
+        console.error('Auth check or data fetch failed:', error);
+        // If any fetch fails, treat as logged out
+        setIsAuthenticated(false);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchDataForAuthenticatedUser();
     } else {
       // Clear authentication state
       localStorage.removeItem('isAuthenticated');
+      setCurrentUser(null);
     }
   }, [isAuthenticated]);
 
@@ -161,17 +168,27 @@ function App() {
     setItemCategories((prev) => [...prev, newItemCategory]);
   };
 
-  const handleLogin = (id, password) => {
-    const user = credentials.find(cred => cred.id === id && cred.password === password);
-    if (user) {
+  const handleLogin = async (id, password) => {
+    // Static credentials for superadmin login
+    const SUPERADMIN_ID = 'admin';
+    const SUPERADMIN_PASSWORD = 'password';
+
+    if (id === SUPERADMIN_ID && password === SUPERADMIN_PASSWORD) {
+      // On successful static login, set a placeholder user object
+      setCurrentUser({
+        name: 'Super Admin',
+        role: 'Administrator',
+      });
       setIsAuthenticated(true);
       navigate('/');
       return true;
     }
-    return false;
+    return false; // If credentials do not match
   };
 
   const handleLogout = () => {
+    // It's good practice to also notify the backend of logout
+    fetch('/api/auth/logout', { method: 'POST' }).catch(err => console.warn("Logout notification failed", err));
     setIsAuthenticated(false);
     // No need to navigate here; the component will re-render to the public routes
   };
@@ -185,12 +202,12 @@ function App() {
             isMobile={isMobile}
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
+            currentUser={currentUser}
           />
           <main className={`
             flex-1 min-h-screen bg-gray-50 flex justify-center items-start transition-all duration-300
-            ${isMobile 
-              ? 'ml-0 pt-20 px-4' 
-              : 'ml-80 px-8'
+            ${isMobile ? 'ml-0' : (sidebarOpen ? 'ml-80' : 'ml-20')}
+            ${isMobile ? 'pt-20 px-4' : 'px-8'}
             }
           `}>
             {isMobile && (
@@ -224,8 +241,16 @@ function App() {
                   element={<StudentManagement students={students} setStudents={setStudents} addStudent={addStudent} />}
                 />
                 <Route
+                  path="/sub-admin-management"
+                  element={<SubAdminManagement />}
+                />
+                <Route
                   path="/items"
                   element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} setItemCategories={setItemCategories} currentCourse={currentCourse} products={products} setProducts={setProducts} />}
+                />
+                <Route
+                  path="/student-receipt"
+                  element={<Navigate to="/" />} // This route is no longer needed
                 />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" />} />

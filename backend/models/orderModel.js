@@ -60,7 +60,8 @@ const orderSchema = new mongoose.Schema(
 // Factory function to get Order model for a specific course
 const getOrderModel = async (course) => {
   try {
-    const connection = await getCourseConnection(course);
+    // Sanitize course name and await the connection
+    const connection = await getCourseConnection(course.replace(/\./g, ''));
     return connection.model('Order', orderSchema);
   } catch (error) {
     console.error(`Error getting Order model for course ${course}:`, error);
