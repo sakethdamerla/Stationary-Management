@@ -4,6 +4,8 @@ const productRoutes = require('./routes/productRoutes');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
 const dotenv = require('dotenv');
+const subAdminRoutes = require('./routes/subAdminRoutes');
+const academicConfigRoutes = require('./routes/academicConfigRoutes');
 
 dotenv.config();
 
@@ -28,6 +30,10 @@ app.use('/api/products', productRoutes);
 
 // Mount user routes
 app.use('/api', userRoutes);
+// Mount sub-admin routes
+app.use('/api', subAdminRoutes);
+// Mount academic config routes
+app.use('/api', academicConfigRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

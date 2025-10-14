@@ -28,7 +28,8 @@ const StudentDetail = ({ students = [], setStudents, products = [] }) => {
   const updateStudentOnServer = async (updated) => {
     try {
       setSaving(true);
-      await fetch(`/api/users/${updated.id}`, {
+      const courseParam = String(updated.course || '').toLowerCase();
+      await fetch(`/api/users/${courseParam}/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paid: updated.paid, items: updated.items }),

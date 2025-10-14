@@ -64,9 +64,48 @@ const StudentReceiptModal = ({ student, products, onClose, onItemToggle }) => {
   const receiptRef = useRef(null);
 
   const triggerPrint = useReactToPrint({
-    content: () => receiptRef.current,
+    contentRef: receiptRef,
     documentTitle: `Receipt-${student?.studentId || 'student'}`,
   });
+
+  const handlePrint = () => {
+    // Try library print first
+    try {
+      if (!receiptRef.current) {
+        console.warn('Print attempted but receiptRef is not ready');
+      } else if (typeof triggerPrint === 'function') {
+        triggerPrint();
+        return;
+      }
+    } catch (_) {
+      // fall through to manual
+    }
+
+    // Fallback: open a new window with the receipt contents and print
+    const node = receiptRef.current;
+    if (!node) return;
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=600,height=800');
+    if (!printWindow) return;
+
+    const styles = `
+      <style>
+        @page { size: auto; margin: 0; }
+        body { margin: 0; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; color: #111827; }
+        .no-print { display: none !important; }
+        .receipt-card { width: 450px; margin: 0 auto; }
+      </style>
+    `;
+
+    printWindow.document.write(`<!doctype html><html><head><title>Receipt-${student?.studentId || 'student'}</title>${styles}</head><body>${node.parentElement?.outerHTML || node.outerHTML}</body></html>`);
+    printWindow.document.close();
+    // Ensure styles/content applied before print
+    printWindow.focus();
+    setTimeout(() => {
+      try { printWindow.print(); } catch (_) {}
+      try { printWindow.close(); } catch (_) {}
+    }, 250);
+  };
 
   const handleDownload = () => {
     const receiptElement = receiptRef.current;
@@ -105,7 +144,11 @@ const StudentReceiptModal = ({ student, products, onClose, onItemToggle }) => {
     <div className="receipt-modal-backdrop" onClick={onClose}>
       <ReceiptStyles />
       <style type="text/css" media="print">
-        {`@page { size: auto; margin: 0; } .receipt-body { margin: 1.6cm; }`}
+        {`@page { size: auto; margin: 0; }
+          .no-print { display: none !important; }
+          .receipt-modal-backdrop { position: static !important; background: none !important; }
+          .receipt-card { box-shadow: none !important; width: 450px; margin: 0 auto; }
+        `}
       </style>
 
       <div className="receipt-card" onClick={(e) => e.stopPropagation()}>
@@ -152,7 +195,7 @@ const StudentReceiptModal = ({ student, products, onClose, onItemToggle }) => {
           <button onClick={handleDownload} className="btn btn-secondary">
             <Download size={16} /> Download
           </button>
-          <button onClick={triggerPrint} className="btn btn-primary">
+          <button onClick={handlePrint} className="btn btn-primary">
             <Printer size={16} /> Print
           </button>
         </div>

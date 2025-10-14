@@ -11,7 +11,8 @@ import Login from './pages/Login';
 import SubAdminManagement from './pages/SubAdminManagement';
 import ItemsList from './pages/ItemsList';
 import HomePage from './pages/HomePage';
-import StudentReceiptModal from './pages/StudentReceipt.jsx';
+import CourseManagement from './pages/CourseManagement';
+// import StudentReceiptModal from './pages/StudentReceipt.jsx'; // Not used
 
 // Placeholder component for other routes
 const Settings = () => <div className="placeholder-page"><h1>Settings</h1><p>This page is a placeholder for settings.</p></div>;
@@ -42,26 +43,20 @@ function App() {
 
   useEffect(() => {
     const fetchDataForAuthenticatedUser = async () => {
+      // Persist authentication state locally for reloads
+      localStorage.setItem('isAuthenticated', 'true');
+
+      // We are using a static admin login; skip backend profile check
+      // Attempt to fetch students data but do not log out on failure
       try {
-        // Persist authentication state
-        localStorage.setItem('isAuthenticated', 'true');
-
-        // Fetch current user profile
-        const profileRes = await fetch('/api/auth/profile');
-        if (!profileRes.ok) throw new Error('Not authenticated');
-        const userData = await profileRes.json();
-        setCurrentUser(userData.user || userData);
-
-        // Fetch students data
         const studentsRes = await fetch('/api/users');
-        if (!studentsRes.ok) throw new Error('Network response was not ok');
-        const studentsData = await studentsRes.json();
-        const formattedStudents = studentsData.map(s => ({ ...s, id: s._id }));
-        setStudents(formattedStudents);
+        if (studentsRes.ok) {
+          const studentsData = await studentsRes.json();
+          const formattedStudents = studentsData.map(s => ({ ...s, id: s._id }));
+          setStudents(formattedStudents);
+        }
       } catch (error) {
-        console.error('Auth check or data fetch failed:', error);
-        // If any fetch fails, treat as logged out
-        setIsAuthenticated(false);
+        console.warn('Could not fetch students yet:', error);
       }
     };
 
@@ -76,16 +71,20 @@ function App() {
 
   // Fetch global products on app load to populate products and itemCategories
   useEffect(() => {
-    fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('/api/products');
+        if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+        const data = await res.json();
         setProducts(data || []);
+        // Normalize product names to be used as item categories
         const cats = Array.from(new Set((data || []).map(p => p.name.toLowerCase().replace(/\s+/g, '_'))));
         setItemCategories(cats);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.warn('Could not fetch products on app load:', err);
-      });
+      }
+    };
+    fetchProducts();
   }, []);
 
   // Listen to item category edit/delete events dispatched from ItemsList
@@ -180,17 +179,36 @@ function App() {
         role: 'Administrator',
       });
       setIsAuthenticated(true);
-      navigate('/');
+      
+      // ✅ CORRECTION: Navigate to the correct authenticated path for the Dashboard, which is '/'
+      navigate('/'); 
+      
       return true;
     }
-    return false; // If credentials do not match
+    // Try sub-admin login via API
+    try {
+      const res = await fetch('/api/subadmins/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: id, password }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      setCurrentUser({ name: data.name, role: data.role, id: data._id });
+      setIsAuthenticated(true);
+      navigate('/');
+      return true;
+    } catch (err) {
+      console.error('Sub-admin login failed:', err);
+      return false;
+    }
   };
 
   const handleLogout = () => {
     // It's good practice to also notify the backend of logout
     fetch('/api/auth/logout', { method: 'POST' }).catch(err => console.warn("Logout notification failed", err));
     setIsAuthenticated(false);
-    // No need to navigate here; the component will re-render to the public routes
+    // The component will re-render to the public routes, and the Navigate path="*" will send them to "/" (HomePage)
   };
 
   return (
@@ -220,6 +238,7 @@ function App() {
             )}
             <div className="w-full max-w-7xl mx-auto">
               <Routes>
+                {/* Dashboard is the default route for authenticated users */}
                 <Route
                   path="/"
                   element={<Dashboard />}
@@ -248,10 +267,11 @@ function App() {
                   path="/items"
                   element={<ItemsList itemCategories={itemCategories} addItemCategory={addItemCategory} setItemCategories={setItemCategories} currentCourse={currentCourse} products={products} setProducts={setProducts} />}
                 />
-                <Route
+                <Route path="/courses" element={<CourseManagement />} />
+                {/* <Route
                   path="/student-receipt"
                   element={<Navigate to="/" />} // This route is no longer needed
-                />
+                /> */}
                 <Route path="/settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
@@ -262,6 +282,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          {/* Unauthenticated users attempting to access any other path are redirected to HomePage ('/') */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       )}

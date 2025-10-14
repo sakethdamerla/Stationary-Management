@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Users, List, Settings, LogOut, ChevronLeft, ChevronRight, Menu, UserPlus, X, User } from 'lucide-react';
+import { Home, PlusCircle, Users, List, Settings, LogOut, ChevronLeft, ChevronRight, Menu, UserPlus, X, User, GraduationCap } from 'lucide-react';
 
 const Sidebar = ({ onLogout, isMobile: isMobileProp, sidebarOpen, setSidebarOpen, currentUser }) => {
   const location = useLocation();
@@ -25,6 +25,7 @@ const Sidebar = ({ onLogout, isMobile: isMobileProp, sidebarOpen, setSidebarOpen
     { path: '/add-student', label: 'Add Student', icon: PlusCircle },
     { path: '/student-management', label: 'Manage Students', icon: Users },
     { path: '/sub-admin-management', label: 'Manage Sub-Admins', icon: UserPlus },
+    { path: '/courses', label: 'Add Courses', icon: GraduationCap },
     { path: '/items', label: 'Manage Products', icon: List },
     { path: '/settings', label: 'Settings', icon: Settings },
   ];

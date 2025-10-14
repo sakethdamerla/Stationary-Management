@@ -98,8 +98,15 @@ const SubAdminManagement = () => {
     const fetchSubAdmins = async () => {
       try {
         const response = await fetch('/api/subadmins');
+        if (!response.ok) {
+          throw new Error(`Failed to load: ${response.status} ${response.statusText}`);
+        }
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          throw new Error('Unexpected response from server');
+        }
         const data = await response.json();
-        setSubAdmins(data.map(sa => ({ ...sa, id: sa._id })));
+        setSubAdmins((data || []).map(sa => ({ ...sa, id: sa._id })));
       } catch (error) {
         console.error("Failed to fetch sub-admins:", error);
       }
@@ -154,6 +161,7 @@ const SubAdminManagement = () => {
       setSubAdmins(prev => isUpdating
         ? prev.map(sa => sa.id === formattedAdmin.id ? formattedAdmin : sa)
         : [...prev, formattedAdmin]);
+      setIsModalOpen(false);
     } catch (error) {
       alert(`Error: ${error.message}`);
     }

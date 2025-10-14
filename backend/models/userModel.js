@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { getCourseConnection } = require('../config/db');
 
 // Define the schema for a user/student
 const userSchema = new mongoose.Schema(
@@ -72,20 +71,7 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Factory function to get User model for a specific course
-const getUserModel = async (course) => {
-  try {
-    // Sanitize course name and await the connection
-    const sanitizedCourse = course.replace(/\./g, '');
-    const connection = await getCourseConnection(sanitizedCourse);
-    return connection.model('User', userSchema);
-  } catch (error) {
-    console.error(`Error getting User model for course ${course}:`, error);
-    throw error;
-  }
-};
-
-// Default model for main database (backward compatibility)
+// Single collection for all users; filter by course field when needed
 const User = mongoose.model('User', userSchema);
 
-module.exports = { User, getUserModel };
+module.exports = { User };

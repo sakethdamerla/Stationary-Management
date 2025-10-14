@@ -97,6 +97,22 @@ const ItemsList = ({ itemCategories, addItemCategory, setItemCategories, current
   const [editingValue, setEditingValue] = useState('');
   const [selectedCourse, setSelectedCourse] = useState(currentCourse || '');
   const [selectedYear, setSelectedYear] = useState('');
+  const [config, setConfig] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/config/academic');
+        if (res.ok) {
+          const data = await res.json();
+          setConfig(data);
+          if (!selectedCourse && data.courses?.[0]) {
+            setSelectedCourse(data.courses[0].name);
+            setSelectedYear(String(data.courses[0].years?.[0] || ''));
+          }
+        }
+      } catch (_) {}
+    })();
+  }, []);
   const [statusMsg, setStatusMsg] = useState('');
 
   // when the global products change, sync categories
@@ -230,19 +246,18 @@ const ItemsList = ({ itemCategories, addItemCategory, setItemCategories, current
             <label className="form-label">Course</label>
             <select className="form-select" value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)}>
               <option value="">All Courses</option>
-              <option value="b.tech">B.Tech</option>
-              <option value="diploma">Diploma</option>
-              <option value="degree">Degree</option>
+              {(config?.courses || []).map(c => (
+                <option key={c.name} value={c.name}>{c.displayName}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="form-label">Year</label>
             <select className="form-select" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)}>
               <option value="">All Years</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
+              {(config?.courses?.find(c => c.name === selectedCourse)?.years || []).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
         </div>

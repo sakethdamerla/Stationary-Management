@@ -106,11 +106,63 @@ const TableStyles = () => (
     }
     .student-management-page .bulk-modal .file-input {
       margin: 1rem 0;
+      background: #f9fafb;
+      border: 1px dashed #d1d5db;
+      border-radius: 0.75rem;
+      padding: 1rem;
+    }
+    .student-management-page .bulk-modal .file-input input[type="file"] {
+      width: 100%;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #374151;
+    }
+    .student-management-page .bulk-modal h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.25rem;
     }
     .student-management-page .bulk-modal .bulk-actions {
       display: flex;
       justify-content: flex-end;
       gap: 0.5rem;
+    }
+    .student-management-page .bulk-modal .btn-upload {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 0.5rem 0.875rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+    .student-management-page .bulk-modal .btn-upload:hover { background: #0ea371; transform: translateY(-1px); }
+    .student-management-page .bulk-modal .btn-upload:active { transform: translateY(0); }
+    .student-management-page .bulk-message {
+      margin-top: 0.75rem;
+      font-size: 0.875rem;
+      color: #374151;
+    }
+    /* Modal presentation */
+    .student-management-page .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.5);
+      display: grid;
+      place-items: center;
+      z-index: 50;
+      padding: 1rem;
+    }
+    .student-management-page .modal-card {
+      width: 100%;
+      max-width: 640px;
+      background: white;
+      border-radius: 0.75rem;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      padding: 1.25rem;
     }
   `}</style>
 );
@@ -188,9 +240,27 @@ const StudentManagement = ({ students = [], setStudents, addStudent }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [course, setCourse] = useState('b.tech');
+  const [course, setCourse] = useState('');
   const [year, setYear] = useState('1');
-  const [branch, setBranch] = useState('CSE');
+  const [branch, setBranch] = useState('');
+  const [config, setConfig] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/config/academic');
+        if (res.ok) {
+          const data = await res.json();
+          setConfig(data);
+          const firstCourse = data.courses?.[0];
+          if (firstCourse) {
+            setCourse(firstCourse.name);
+            setYear(String(firstCourse.years?.[0] || '1'));
+            setBranch(firstCourse.branches?.[0] || '');
+          }
+        }
+      } catch (_) {}
+    })();
+  }, []);
   const [message, setMessage] = useState('');
   // Bulk upload state
   const [showBulkModal, setShowBulkModal] = useState(false);
@@ -244,16 +314,21 @@ const StudentManagement = ({ students = [], setStudents, addStudent }) => {
 
   const saveEdit = async (id) => {
     try {
-      // PATCH via existing update endpoint: update only course/year/branch/name/studentId not available in backend, so we'll simulate by deleting+recreating? Instead, call backend register is only for create; updateUser only edits items/paid. So implement client-side update by calling backend PUT on /api/users/:id to update allowed fields via a small endpoint.
-      // We'll call a new backend route `/api/users/:id` (PUT) that supports updating basic profile fields if available.
-      const res = await fetch(`/api/users/${id}`, {
+      const original = (students || []).find(s => s.id === id);
+      const courseParam = String(original?.course || editFields.course || '').toLowerCase();
+      const res = await fetch(`/api/users/${courseParam}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFields),
+        body: JSON.stringify({
+          name: editFields.name,
+          studentId: editFields.studentId,
+          year: Number(editFields.year),
+          branch: editFields.branch,
+        }),
       });
       if (!res.ok) throw new Error('Update failed');
-      const updated = await res.json();
-      setStudents(prev => prev.map(p => p.id === id ? { ...p, ...editFields } : p));
+      const updated = await res.json(); // eslint-disable-line
+      setStudents(prev => prev.map(p => p.id === id ? { ...p, ...editFields, year: Number(editFields.year) } : p));
       cancelEdit();
     } catch (err) {
       console.error('Edit failed', err);
@@ -264,7 +339,8 @@ const StudentManagement = ({ students = [], setStudents, addStudent }) => {
   const deleteStudent = async (student) => {
     const { id, course } = student;
     try {
-      const res = await fetch(`/api/users/${course}/${id}`, { method: 'DELETE' });
+      const courseParam = String(course || '').toLowerCase();
+      const res = await fetch(`/api/users/${courseParam}/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Delete failed');
       setStudents(prev => prev.filter(s => s.id !== id));
     } catch (err) {
@@ -388,7 +464,9 @@ const StudentManagement = ({ students = [], setStudents, addStudent }) => {
                   setBulkMessage('Uploading...');
                   const fd = new FormData();
                   fd.append('file', bulkFile);
-                  const res = await fetch('/api/users/import', { method: 'POST', body: fd });
+                  // require course selection for import
+                  const importCourse = courseFilter !== 'all' ? courseFilter : (config?.courses?.[0]?.name || '');
+                  const res = await fetch(`/api/users/import/${importCourse}`, { method: 'POST', body: fd });
                   if (!res.ok) throw new Error('Upload failed');
                   const data = await res.json(); // eslint-disable-line
                   // Expect backend to return { imported: [...students] }
@@ -421,23 +499,21 @@ const StudentManagement = ({ students = [], setStudents, addStudent }) => {
                 <div className="form-group full-width"><label>Pin Number</label><input className="form-input" value={studentId} onChange={e => setStudentId(e.target.value)} /></div>
                 <div className="form-group"><label>Course</label>
                   <select className="form-select" value={course} onChange={e => setCourse(e.target.value)}>
-                    <option value="b.tech">B.Tech</option>
-                    <option value="diploma">Diploma</option>
-                    <option value="degree">Degree</option>
+                    {(config?.courses || []).map(c => (
+                      <option key={c.name} value={c.name}>{c.displayName}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group"><label>Year</label>
                   <select className="form-select" value={year} onChange={e => setYear(e.target.value)}>
-                    {(course === 'b.tech' ? [1,2,3,4] : [1,2,3]).map(y => <option key={y} value={y}>{y}</option>)}
+                    {(config?.courses?.find(c => c.name === course)?.years || [1]).map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
                 <div className="form-group full-width"><label>Branch</label>
                   <select className="form-select" value={branch} onChange={e => setBranch(e.target.value)}>
-                    {course === 'b.tech' ? <>
-                      <option value="CSE">CSE</option><option value="ECE">ECE</option>
-                    </> : <>
-                      <option value="General">General</option>
-                    </>}
+                    {(config?.courses?.find(c => c.name === course)?.branches || ['']).map(b => (
+                      <option key={b} value={b}>{b || 'N/A'}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="modal-actions">

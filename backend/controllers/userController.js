@@ -1,6 +1,6 @@
-const { User, getUserModel } = require('../models/userModel');
-const { getOrderModel } = require('../models/orderModel');
-const { getProductModel } = require('../models/productModel');
+const { User } = require('../models/userModel');
+const { Order } = require('../models/orderModel');
+const { Product } = require('../models/productModel');
 const asyncHandler = require('express-async-handler');
 
 /**
@@ -16,12 +16,10 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('Course is required');
   }
 
-  // Get the appropriate User model for the course
-  const UserModel = await getUserModel(course);
-
-  // Check if a user with the same email or studentId already exists in this course database
-  const userExists = await UserModel.findOne({
+  // Check if a user with the same email or studentId already exists (single collection)
+  const userExists = await User.findOne({
     $or: [{ email }, { studentId }],
+    course,
   }).select('+password');
 
   if (userExists) {
@@ -35,7 +33,7 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error(message);
   }
 
-  const user = await UserModel.create({
+  const user = await User.create({
       name,
       email,
       password,
@@ -77,19 +75,12 @@ const getUsersByCourse = asyncHandler(async (req, res) => {
     throw new Error('Course parameter is required');
   }
 
-  // Get the appropriate User model for the course
-  const UserModel = await getUserModel(course);
-  
-  // Ensure Order and Product models are registered on the same connection for populate to work
-  await getOrderModel(course);
-  await getProductModel(course);
-  
   // Populate orders for each user, and then populate the products within each order's orderItems
-  const users = await UserModel.find({}).populate({
+  const users = await User.find({ course }).populate({
     path: 'orders',
     populate: {
       path: 'orderItems.product',
-      model: 'Product',
+      model: Product.modelName,
     },
   });
   res.status(200).json(users);
@@ -101,32 +92,14 @@ const getUsersByCourse = asyncHandler(async (req, res) => {
  * @access  Private/Admin (Should be protected in a real app)
  */
 const getAllUsers = asyncHandler(async (req, res) => {
-  const courses = ['b.tech', 'diploma', 'degree'];
-  const allUsers = [];
-
-  for (const course of courses) {
-    try {
-      const UserModel = await getUserModel(course);
-      
-      // Ensure Order and Product models are registered on the same connection for populate to work
-      await getOrderModel(course);
-      await getProductModel(course);
-      
-      const users = await UserModel.find({}).populate({
-        path: 'orders',
-        populate: {
-          path: 'orderItems.product',
-          model: 'Product',
-        },
-      });
-      allUsers.push(...users);
-    } catch (error) {
-      console.error(`Error fetching users for course ${course}:`, error);
-      // Continue with other courses even if one fails
-    }
-  }
-
-  res.status(200).json(allUsers);
+  const users = await User.find({}).populate({
+    path: 'orders',
+    populate: {
+      path: 'orderItems.product',
+      model: Product.modelName,
+    },
+  });
+  res.status(200).json(users);
 });
 
 /**
@@ -143,9 +116,7 @@ const updateUser = asyncHandler(async (req, res) => {
     throw new Error('Course parameter is required');
   }
 
-  // Get the appropriate User model for the course
-  const UserModel = await getUserModel(course);
-  const user = await UserModel.findById(id);
+  const user = await User.findById(id);
   
   if (!user) {
     res.status(404);
@@ -186,16 +157,14 @@ const deleteUser = asyncHandler(async (req, res) => {
     throw new Error('Course parameter is required');
   }
 
-  // Get the appropriate User model for the course
-  const UserModel = await getUserModel(course);
-  const user = await UserModel.findById(id);
+  const user = await User.findById(id);
   
   if (!user) {
     res.status(404);
     throw new Error('User not found');
   }
 
-  await UserModel.findByIdAndDelete(id);
+  await User.deleteOne({ _id: id });
   res.json({ message: 'User deleted' });
 });
 

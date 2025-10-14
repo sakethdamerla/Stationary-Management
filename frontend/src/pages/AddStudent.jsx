@@ -1,14 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const AddStudent = ({ addStudent }) => {
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  const [course, setCourse] = useState('b.tech');
-  const [year, setYear] = useState('1');
-  const [branch, setBranch] = useState('CSE');
+  const [course, setCourse] = useState('');
+  const [year, setYear] = useState('');
+  const [branch, setBranch] = useState('');
+  const [config, setConfig] = useState(null);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/config/academic');
+        if (res.ok) {
+          const data = await res.json();
+          setConfig(data);
+          const firstCourse = data.courses?.[0];
+          if (firstCourse) {
+            setCourse(firstCourse.name);
+            const firstYear = String((firstCourse.years && firstCourse.years[0]) || '1');
+            setYear(firstYear);
+            const firstBranch = (firstCourse.branches && firstCourse.branches[0]) || '';
+            setBranch(firstBranch);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const currentCourseObj = useMemo(() => {
+    return (config?.courses || []).find(c => c.name === course);
+  }, [config, course]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -88,14 +115,15 @@ const AddStudent = ({ addStudent }) => {
                 onChange={(e) => {
                   const newCourse = e.target.value;
                   setCourse(newCourse);
-                  setYear('1');
-                  if (newCourse === 'b.tech') setBranch('CSE');
-                  else setBranch('General');
+                  const found = (config?.courses || []).find(c => c.name === newCourse);
+                  const nextYear = String((found?.years && found.years[0]) || '1');
+                  setYear(nextYear);
+                  setBranch((found?.branches && found.branches[0]) || '');
                 }}
               >
-                <option value="b.tech">B.Tech</option>
-                <option value="diploma">Diploma</option>
-                <option value="degree">Degree</option>
+                {(config?.courses || []).map(c => (
+                  <option key={c.name} value={c.name}>{c.displayName}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -106,7 +134,7 @@ const AddStudent = ({ addStudent }) => {
                 value={year} 
                 onChange={(e) => setYear(e.target.value)}
               >
-                {(course === 'b.tech' ? [1,2,3,4] : [1,2,3]).map(y => (
+                {(currentCourseObj?.years || [1]).map(y => (
                   <option key={y} value={y}>Year {y}</option>
                 ))}
               </select>
@@ -121,21 +149,9 @@ const AddStudent = ({ addStudent }) => {
               value={branch} 
               onChange={(e) => setBranch(e.target.value)}
             >
-              {course === 'b.tech' ? (
-                <>
-                  <option value="CSE">Computer Science & Engineering</option>
-                  <option value="ECE">Electronics & Communication Engineering</option>
-                  <option value="ME">Mechanical Engineering</option>
-                  <option value="CE">Civil Engineering</option>
-                  <option value="EEE">Electrical & Electronics Engineering</option>
-                </>
-              ) : (
-                <>
-                  <option value="General">General</option>
-                  <option value="IT">Information Technology</option>
-                  <option value="Management">Management</option>
-                </>
-              )}
+              {(currentCourseObj?.branches || ['']).map(b => (
+                <option key={b} value={b}>{b || 'N/A'}</option>
+              ))}
             </select>
           </div>
 
