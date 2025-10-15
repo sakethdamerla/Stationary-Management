@@ -20,15 +20,18 @@ const Sidebar = ({ onLogout, isMobile: isMobileProp, sidebarOpen, setSidebarOpen
     }
   }, [isMobileProp, sidebarOpen, setSidebarOpen]);
 
+  // Check if current user is super admin
+  const isSuperAdmin = currentUser?.role === 'Administrator';
+
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: Home, exact: true },
     { path: '/add-student', label: 'Add Student', icon: PlusCircle },
     { path: '/student-management', label: 'Manage Students', icon: Users },
-    { path: '/sub-admin-management', label: 'Manage Sub-Admins', icon: UserPlus },
+    { path: '/sub-admin-management', label: 'Manage Sub-Admins', icon: UserPlus, superAdminOnly: true },
     { path: '/courses', label: 'Add Courses', icon: GraduationCap },
     { path: '/items', label: 'Manage Products', icon: List },
     { path: '/settings', label: 'Settings', icon: Settings },
-  ];
+  ].filter(item => !item.superAdminOnly || isSuperAdmin);
 
   const handleToggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -122,8 +125,10 @@ const Sidebar = ({ onLogout, isMobile: isMobileProp, sidebarOpen, setSidebarOpen
                 <User size={20} />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-semibold text-sm text-gray-800 truncate">{currentUser.name || 'Admin User'}</span>
-                <span className="text-xs text-gray-500">{currentUser.role || 'Administrator'}</span>
+                <span className="font-semibold text-sm text-gray-800 truncate">{currentUser.name}</span>
+                <span className="text-xs text-gray-500">
+                  {isSuperAdmin ? 'Administrator' : 'Sub-Administrator'}
+                </span>
               </div>
             </div>
           )}

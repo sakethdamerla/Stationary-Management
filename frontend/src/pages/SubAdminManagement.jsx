@@ -23,64 +23,52 @@ const SubAdminModal = ({ isOpen, onClose, onSave, subAdmin }) => {
       alert('Password is required for new sub-admins.');
       return;
     }
-    // Only include password if it has been set
-    onSave({ ...subAdmin, name, role, ...(password && { password }) });
+    // Set default role for new sub-admins and only include password if it has been set
+    const submissionRole = subAdmin ? role : 'Editor';
+    onSave({ ...subAdmin, name, role: submissionRole, ...(password && { password }) });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-6 rounded-xl shadow-soft w-full max-w-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">{subAdmin ? 'Edit' : 'Create'} Sub-Admin</h2>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200">
-            <X size={20} />
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex justify-center items-center z-50 backdrop-blur-sm">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-lg border border-gray-200 transform transition-all duration-300 scale-100 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">{subAdmin ? 'Edit' : 'Create'} Sub-Admin</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors duration-200">
+            <X size={24} />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label htmlFor="name" className="form-label">Name</label>
+          <div className="mb-5">
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
             <input
               id="name"
               type="text"
-              className="form-input"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter sub-admin name"
               required
             />
           </div>
-          <div className="mb-4">
-            <label htmlFor="password" className="form-label">Password</label>
+          <div className="mb-6">
+            <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
             <input
               id="password"
               type="password"
-              className="form-input"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={subAdmin ? "Enter new password to change" : "Enter password"}
               required={!subAdmin} // Password is required only for new sub-admins
             />
           </div>
-          <div className="mb-6">
-            <label htmlFor="role" className="form-label">Role</label>
-            <select
-              id="role"
-              className="form-select"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option>Editor</option>
-              <option>Viewer</option>
-              <option>Accountant</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="btn btn-secondary">
+          <div className="flex justify-end gap-4 mt-8">
+            <button type="button" onClick={onClose} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors duration-200">
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              Save Sub-Admin
+            <button type="submit" className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200">
+              {subAdmin ? 'Update Sub-Admin' : 'Create Sub-Admin'}
             </button>
           </div>
         </form>
@@ -89,10 +77,13 @@ const SubAdminModal = ({ isOpen, onClose, onSave, subAdmin }) => {
   );
 };
 
-const SubAdminManagement = () => {
+const SubAdminManagement = ({ currentUser }) => {
   const [subAdmins, setSubAdmins] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSubAdmin, setEditingSubAdmin] = useState(null);
+  
+  // Check if current user is super admin
+  const isSuperAdmin = currentUser?.role === 'Administrator';
 
   useEffect(() => {
     const fetchSubAdmins = async () => {
@@ -169,41 +160,84 @@ const SubAdminManagement = () => {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-            <Users size={32} />
-            Manage Sub-Admins
-          </h1>
-          <button onClick={handleCreate} className="btn btn-primary btn-with-icon">
-            <Plus size={16} />
-            Create Sub-Admin
-          </button>
-        </div>
-        <div className="table-card">
-          <div className="table-container">
-            <table className="students-table-modern">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {subAdmins.map(sa => (
-                  <tr key={sa.id}>
-                    <td>{sa.name}</td>
-                    <td><span className="branch-text">{sa.role}</span></td>
-                    <td className="actions-cell text-right">
-                      <button onClick={() => handleEdit(sa)} className="btn btn-outline btn-sm btn-with-icon"><Edit size={14} /></button>
-                      <button onClick={() => handleDelete(sa.id)} className="btn btn-danger btn-sm btn-with-icon"><Trash2 size={14} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                <Users size={32} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Sub-Admin Management
+                </h1>
+                <p className="text-gray-600 mt-1">Manage your team of sub-administrators</p>
+              </div>
+            </div>
+           
+          
           </div>
+
+          {subAdmins.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+              <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Users size={48} className="text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Sub-Admins Yet</h3>
+              <p className="text-gray-600 mb-6">Get started by creating your first sub-admin to help manage the system.</p>
+              {isSuperAdmin && (
+                <button onClick={handleCreate} className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 inline-flex items-center gap-2">
+                  <Plus size={20} />
+                  Create Your First Sub-Admin
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  All Sub-Admins ({subAdmins.length})
+                </h2>
+              </div>
+
+              <div className="divide-y divide-gray-50">
+                {subAdmins.map((subAdmin, index) => (
+                  <div key={subAdmin.id} className={`p-6 hover:bg-blue-50/30 transition-colors duration-200 ${index === 0 ? 'border-t-0' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                          <span className="text-white font-bold text-lg">
+                            {subAdmin.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{subAdmin.name}</h3>
+                          <p className="text-sm text-gray-500">Sub-Administrator</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(subAdmin)}
+                          className="p-2 bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-600 rounded-lg transition-all duration-200 transform hover:scale-105"
+                          title="Edit Sub-Admin"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(subAdmin.id)}
+                          className="p-2 bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 rounded-lg transition-all duration-200 transform hover:scale-105"
+                          title="Delete Sub-Admin"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <SubAdminModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSave} subAdmin={editingSubAdmin} />

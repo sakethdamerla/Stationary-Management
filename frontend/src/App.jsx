@@ -23,7 +23,10 @@ function App() {
   const [products, setProducts] = useState([]);
   const [currentCourse, setCurrentCourse] = useState('');
   // Initialize isAuthenticated from localStorage
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('isAuthenticated'));
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -169,20 +172,22 @@ function App() {
 
   const handleLogin = async (id, password) => {
     // Static credentials for superadmin login
-    const SUPERADMIN_ID = 'admin';
-    const SUPERADMIN_PASSWORD = 'password';
+    const SUPERADMIN_ID = 'superadmin';
+    const SUPERADMIN_PASSWORD = 'superadmin123';
 
     if (id === SUPERADMIN_ID && password === SUPERADMIN_PASSWORD) {
       // On successful static login, set a placeholder user object
-      setCurrentUser({
+      const userData = {
         name: 'Super Admin',
         role: 'Administrator',
-      });
+      };
+      setCurrentUser(userData);
+      localStorage.setItem('currentUser', JSON.stringify(userData));
       setIsAuthenticated(true);
-      
+
       // ✅ CORRECTION: Navigate to the correct authenticated path for the Dashboard, which is '/'
-      navigate('/'); 
-      
+      navigate('/');
+
       return true;
     }
     // Try sub-admin login via API
@@ -194,7 +199,9 @@ function App() {
       });
       if (!res.ok) return false;
       const data = await res.json();
-      setCurrentUser({ name: data.name, role: data.role, id: data._id });
+      const userData = { name: data.name, role: data.role, id: data._id };
+      setCurrentUser(userData);
+      localStorage.setItem('currentUser', JSON.stringify(userData));
       setIsAuthenticated(true);
       navigate('/');
       return true;
@@ -207,7 +214,10 @@ function App() {
   const handleLogout = () => {
     // It's good practice to also notify the backend of logout
     fetch('/api/auth/logout', { method: 'POST' }).catch(err => console.warn("Logout notification failed", err));
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('isAuthenticated');
     setIsAuthenticated(false);
+    setCurrentUser(null);
     // The component will re-render to the public routes, and the Navigate path="*" will send them to "/" (HomePage)
   };
 
@@ -261,7 +271,7 @@ function App() {
                 />
                 <Route
                   path="/sub-admin-management"
-                  element={<SubAdminManagement />}
+                  element={<SubAdminManagement currentUser={currentUser} />}
                 />
                 <Route
                   path="/items"
